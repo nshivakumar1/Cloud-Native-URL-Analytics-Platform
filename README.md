@@ -8,7 +8,7 @@
 ![Terraform](https://img.shields.io/badge/terraform-GCP-purple.svg)
 ![Redis](https://img.shields.io/badge/redis-caching-red.svg)
 ![ELK](https://img.shields.io/badge/ELK-observability-orange.svg)
-
+[![Build and Deploy](https://github.com/nshivakumar1/Cloud-Native-URL-Analytics-Platform/actions/workflows/deploy.yml/badge.svg)](https://github.com/nshivakumar1/Cloud-Native-URL-Analytics-Platform/actions/workflows/deploy.yml)
 ---
 
 ## 🧠 What is this?
