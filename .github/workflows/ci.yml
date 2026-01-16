@@ -1,0 +1,44 @@
+name: CI - Build & Test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies (Linting)
+      run: |
+        python -m pip install --upgrade pip
+        pip install pylint
+
+    - name: Run Linting
+      run: |
+        # Just checking for gross syntax errors for now
+        pylint --disable=all --enable=E,F app/main.py
+
+    - name: Build Docker Image
+      run: |
+        docker build -t app:latest ./app
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'app:latest'
+        format: 'table'
+        exit-code: '0' # Don't fail compilation on vulnerability found yet
+        ignore-unfixed: true
+        vuln-type: 'os,library'
+        severity: 'CRITICAL,HIGH'

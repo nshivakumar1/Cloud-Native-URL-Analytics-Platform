@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+*.egg-info/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+# Keep the lock file if you want to pin versions, but .terraform folder must be ignored
+
+# OS
+.DS_Store
+
+# Secrets & Environment
+.env
+gcp_credentials.json
+
+# Docker
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/

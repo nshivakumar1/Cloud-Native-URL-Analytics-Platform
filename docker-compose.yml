@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  app:
+    build: ./app
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/gcp_credentials.json
+    volumes:
+      # Mount the GCP Service Account Key from the host to the container
+      - ./gcp_credentials.json:/app/gcp_credentials.json:ro
+    depends_on:
+      - redis
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.13
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    networks:
+      - app-network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.17.13
+    command: logstash -f /etc/logstash/conf.d/logstash.conf
+    volumes:
+      - ./elk/logstash:/etc/logstash/conf.d
+    ports:
+      - "5001:5000/tcp"
+      - "9600:9600"
+    depends_on:
+      - elasticsearch
+    networks:
+      - app-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.13
+    volumes:
+      - ./elk/kibana/kibana.yml:/usr/share/kibana/config/kibana.yml
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+  es_data:
