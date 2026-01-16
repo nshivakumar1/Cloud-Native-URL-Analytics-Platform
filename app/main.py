@@ -25,6 +25,37 @@ logger.addHandler(logstash.TCPLogstashHandler(host, 5000, version=1))
 
 app = FastAPI(title="URL Analytics Platform")
 
+# Middleware for structured logging
+import time
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class LoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        start_time = time.time()
+        
+        # Process request
+        response = await call_next(request)
+        
+        # Calculate duration
+        process_time = (time.time() - start_time) * 1000
+        
+        # Prepare structured log
+        log_fields = {
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": response.status_code,
+            "duration_ms": round(process_time, 2),
+            "client_ip": request.client.host,
+            "user_agent": request.headers.get("user-agent", "unknown")
+        }
+        
+        # Log to Logstash (and console)
+        logger.info("HTTP Request", extra=log_fields)
+        
+        return response
+
+app.add_middleware(LoggingMiddleware)
+
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
