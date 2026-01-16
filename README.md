@@ -101,6 +101,10 @@ curl http://localhost:8000/stats/a1b2c3
 
 ## ☁️ Deployment (GCP)
 
+### 🟢 Live Demo
+The application is currently deployed and active on Google Cloud:
+**👉 [http://34.173.226.60](http://34.173.226.60)**
+
 This project uses **Terraform** to provision infrastructure on Google Cloud Platform.
 
 1.  **Set Secrets in GitHub**:
