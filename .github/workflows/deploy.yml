@@ -1,0 +1,75 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-push-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Google Auth
+      id: auth
+      uses: 'google-github-actions/auth@v1'
+      with:
+        credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+    - name: Set up Cloud SDK
+      uses: 'google-github-actions/setup-gcloud@v1'
+
+    - name: Configure Docker
+      run: |
+        gcloud auth configure-docker us-central1-docker.pkg.dev
+
+    - name: Build and Push Docker Image
+      env:
+        PROJECT_ID: ${{ secrets.TF_VAR_project_id }}
+        REPO_NAME: url-analytics-repo
+        IMAGE_NAME: app
+      run: |
+        docker build -t us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:latest ./app
+        docker push us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:latest
+
+    - name: Deploy to VM via SSH
+      uses: appleboy/ssh-action@master
+      env:
+        PROJECT_ID: ${{ secrets.TF_VAR_project_id }}
+        REPO_NAME: url-analytics-repo
+        IMAGE_NAME: app
+      with:
+        host: ${{ secrets.VM_IP }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        envs: PROJECT_ID,REPO_NAME,IMAGE_NAME
+        script: |
+          # Authenticate Docker on VM (if not already)
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+          
+          # Pull latest image
+          docker pull us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:latest
+          
+          # Stop and remove existing container
+          docker stop app || true
+          docker rm app || true
+          
+          # Run new container
+          # Note: Re-using the same env vars and network config as local would vary, 
+          # but here we run simply on host network or port mapping.
+          docker run -d \
+            --name app \
+            --restart always \
+            -p 80:8000 \
+            -e GCP_PROJECT_ID=$PROJECT_ID \
+            -e REDIS_HOST=redis \
+            --network app-network \
+            us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:latest
+            
+          # Verify functionality
+          docker ps

@@ -7,6 +7,11 @@ import logstash
 import os
 import vertexai
 from vertexai.preview.generative_models import GenerativeModel
+from google.api_core.exceptions import GoogleAPICallError
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import requests
+from bs4 import BeautifulSoup
 
 # Configure logging
 host = 'logstash'
@@ -20,11 +25,14 @@ logger.addHandler(logstash.TCPLogstashHandler(host, 5000, version=1))
 
 app = FastAPI(title="URL Analytics Platform")
 
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # Vertex AI Setup (Try/Except to allow local run without creds if needed)
 try:
     PROJECT_ID = os.getenv("GCP_PROJECT_ID", "your-project-id")
     vertexai.init(project=PROJECT_ID, location="us-central1")
-    model = GenerativeModel("gemini-pro")
+    model = GenerativeModel("gemini-2.0-flash-exp")
     AI_ENABLED = True
 except Exception as e:
     logger.warning(f"Vertex AI init failed: {e}. AI features disabled.")
@@ -39,11 +47,25 @@ def analyze_url_task(short_code: str, url: str):
         return
 
     try:
+        # Fetch page content
+        try:
+            page = requests.get(url, timeout=5, headers={"User-Agent": "Mozilla/5.0"})
+            soup = BeautifulSoup(page.content, 'html.parser')
+            # Get text, remove excess whitespace, limit to 2000 chars
+            page_text = " ".join(soup.get_text().split())[:2000]
+        except Exception:
+            page_text = "Could not fetch content. Analyze based on URL only."
+
         prompt = f"""
-        Analyze the following URL: {url}
-        1. Categorize it (e.g., Tech, News, Shopping, Social).
-        2. Provide a very short summary (max 10 words) of what this site likely is.
-        Return ONLY a JSON object like: {{"category": "CategoryName", "summary": "Short summary here"}}
+        Analyze the following website content from URL: {url}
+        
+        Website Text Content (Truncated):
+        {page_text}
+        
+        1. Categorize it (e.g., Tech, News, Shopping, Social, etc).
+        2. Provide a 2-sentence summary of what this specific page is about.
+        
+        Return ONLY a JSON object like: {{"category": "CategoryName", "summary": "Brief summary here"}}
         """
         response = model.generate_content(prompt)
         # Simple parsing (assuming model follows instructions, in prod we'd use robust parsing)
@@ -56,6 +78,9 @@ def analyze_url_task(short_code: str, url: str):
         insights = json.loads(text)
         redis_client.save_ai_insights(short_code, insights)
         logger.info(f"AI Analysis for {short_code} complete: {insights}")
+
+    except GoogleAPICallError as e:
+        logger.warning(f"AI Analysis skipped for {short_code} (GCP API Error): {e.message if hasattr(e, 'message') else e}")
     except Exception as e:
         logger.error(f"AI Analysis failed for {short_code}: {e}")
 
@@ -76,6 +101,10 @@ def shorten_url(request: URLRequest, background_tasks: BackgroundTasks):
     except Exception as e:
         logger.error(f"Error saving URL: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+@app.get("/")
+async def read_index():
+    return FileResponse('static/index.html')
 
 @app.get("/{short_code}")
 def redirect_to_url(short_code: str):

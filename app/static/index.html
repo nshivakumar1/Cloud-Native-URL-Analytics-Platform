@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud-Native URL Analytics</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">🚀 URL Analytics</div>
+        </header>
+
+        <main>
+            <section class="card glass">
+                <h1>Shorten Your Link</h1>
+                <p>AI-Powered insights & real-time analytics.</p>
+                
+                <div class="input-group">
+                    <input type="url" id="urlInput" placeholder="Paste your long link here..." required>
+                    <button id="shortenBtn">Shorten ⚡</button>
+                </div>
+            </section>
+
+            <section id="resultCard" class="card glass result-card hidden">
+                <div class="result-header">
+                    <h2>Success! 🎉</h2>
+                    <span class="close-btn" onclick="resetUI()">×</span>
+                </div>
+                
+                <div class="link-box">
+                    <a href="#" id="shortLink" target="_blank">...</a>
+                    <button class="copy-btn" onclick="copyLink()">📋</button>
+                </div>
+
+                <div class="stats-area">
+                    <div class="stat-item">
+                        <span class="label">Visits</span>
+                        <span class="value" id="visitCount">0</span>
+                    </div>
+                </div>
+
+                <div class="ai-box hidden" id="aiBox">
+                    <div class="ai-header">
+                        <span class="gemini-icon">✨</span> Gemini Analysis
+                    </div>
+                    <div class="ai-content">
+                        <span class="badge" id="aiCategory">Loading...</span>
+                        <p id="aiSummary">Analyzing content...</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="/static/script.js"></script>
+</body>
+</html>

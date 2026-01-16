@@ -22,6 +22,9 @@ def save_url(url: str) -> str:
     # Store mapping: short_code -> original_url
     r.set(short_code, url)
     
+    # Invalidate old insights to ensure fresh analysis
+    r.delete(f"insights:{short_code}")
+    
     # Initialize click count
     if not r.exists(f"stats:{short_code}"):
         r.set(f"stats:{short_code}", 0)
