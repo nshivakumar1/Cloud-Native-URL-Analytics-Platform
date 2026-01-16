@@ -30,7 +30,7 @@ jobs:
 
     - name: Build and Push Docker Image
       env:
-        PROJECT_ID: ${{ secrets.TF_VAR_project_id }}
+        PROJECT_ID: ${{ steps.auth.outputs.project_id }}
         REPO_NAME: url-analytics-repo
         IMAGE_NAME: app
       run: |
