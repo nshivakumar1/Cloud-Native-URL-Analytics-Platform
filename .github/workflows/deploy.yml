@@ -40,7 +40,7 @@ jobs:
     - name: Deploy to VM via SSH
       uses: appleboy/ssh-action@master
       env:
-        PROJECT_ID: ${{ secrets.TF_VAR_project_id }}
+        PROJECT_ID: ${{ steps.auth.outputs.project_id }}
         REPO_NAME: url-analytics-repo
         IMAGE_NAME: app
       with:
@@ -49,27 +49,31 @@ jobs:
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         envs: PROJECT_ID,REPO_NAME,IMAGE_NAME
         script: |
-          # Authenticate Docker on VM (if not already)
+          # Create app directory if not exists
+          mkdir -p ~/app/elk/kibana
+          mkdir -p ~/app/elk/logstash
+          
+          # Authenticate Docker
           gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
           
-          # Pull latest image
-          docker pull us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:latest
+          # Create .env file for Docker Compose
+          echo "PROJECT_ID=$PROJECT_ID" > ~/app/.env
           
-          # Stop and remove existing container
-          docker stop app || true
-          docker rm app || true
+          # Pull latest images
+          cd ~/app
+          docker-compose -f docker-compose.prod.yml pull
           
-          # Run new container
-          # Note: Re-using the same env vars and network config as local would vary, 
-          # but here we run simply on host network or port mapping.
-          docker run -d \
-            --name app \
-            --restart always \
-            -p 80:8000 \
-            -e GCP_PROJECT_ID=$PROJECT_ID \
-            -e REDIS_HOST=redis \
-            --network app-network \
-            us-central1-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/$IMAGE_NAME:latest
-            
-          # Verify functionality
-          docker ps
+          # Restart services
+          docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+          
+          # Cleanup unused images
+          docker image prune -f
+
+    - name: Copy Configs to VM
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.VM_IP }}
+        username: ${{ secrets.SSH_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        source: "docker-compose.prod.yml,elk/"
+        target: "~/app"
