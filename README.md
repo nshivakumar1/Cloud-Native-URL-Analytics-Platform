@@ -28,15 +28,15 @@ This project is a **production-ready demonstration** of modern DevOps and Cloud-
 ## 📸 Screenshots
 
 ### Web Application
-*The modern, responsive interface for shortening URLs.*
+*The interface showing a live URL shortening example with **Gemini AI Analysis** (Category & Summary).*
 ![Web App](screenshots/webapp.png)
 
 ### Kibana Dashboard
-*Real-time visibility into traffic, latency, and system health.*
+*Real-time observability showing structured log ingestion and traffic metrics.*
 ![Kibana](screenshots/kibana.png)
 
 ### Redis Commander
-*Direct access to the caching layer for debugging.*
+*Direct view of the Redis caching layer, populated with active URL mappings and analytics keys.*
 ![Redis UI](screenshots/redis.png)
 
 ---
